@@ -10,20 +10,44 @@
 muscle_c = table2cell(readtable("muscle_OI.txt")); % muscle IO
 bone_c = table2cell(readtable("bony_landmark.txt")); % landmarks
 
+ % fill bone_c with empty cells to allow cell array concatenation
+for i = 5:1:7
+    for j = 1:1:size(bone_c,1)
+        bone_c{j,i} = [];
+    end
+end
+
+mb_c = [muscle_c ; bone_c]; % concatenating cell arrays
+muscle_count = size(muscle_c,1); % get muscle count for future automation
+clearvars muscle_c bone_c % clear original cell arrays
+
 % determine femoral mechanical axis
  % assign cell array length for automated appending
-ind = size(bone_c,1)+1; % track new additions to bone_c cell array
+ind = size(mb_c,1)+1; % track new additions to bone_c cell array
 
  % 1/2 vec between femoral epicondyles
- bone_c{ind,1} = "LFE_MFE";
-[bone_c{ind, 2}, bone_c{ind, 3}, bone_c{ind, 4}] = ...
-    findVector(bone_c, "LFE", "MFE", 0.5, "b2p");
+mb_c{ind,1} = "Epi_Midpoint";
+[mb_c{ind, 2}, mb_c{ind, 3}, mb_c{ind, 4}] = ...
+    findVector(mb_c, "LFE", "MFE", 0.5, "b2p");
 
  % vector from HJC to 1/2 epi vec
 ind = ind +1;
-bone_c{ind,1} = "FE_Mechanical_axis";
-[bone_c{ind, 2}, bone_c{ind, 3}, bone_c{ind, 4}] = ...
-    findVector(bone_c, "MFE", "LFE_MFE", 1, "resultant");
+mb_c{ind,1} = "FE_Mechanical_axis";
+[mb_c{ind, 2}, mb_c{ind, 3}, mb_c{ind, 4}] = ...
+    findVector(mb_c, "MFE", "Epi_Midpoint", 1, "resultant");
+
+% find vector between mEd & muscle insertions in neutral
+for i = 1:1:muscle_count
+    % n_mEd = neutral hip postur_vector from middle Epicondyle distance
+    n_mEd_insertion{i,1} = mb_c{i,1}; % assign same row name
+    [n_mEd_insertion{i,2}, n_mEd_insertion{i,3}, n_mEd_insertion{i,4}] = ...
+        findVector(mb_c, mb_c{i,1}, "FE_Mechanical_axis", 1, "b2p");
+end
+
+%% rotate femur into flexion by n-degrees until 90 degrees
+    % rotate femoral mechanical axis vector
+    % find new vector from middle epicondyle distance for ea muscle
+    % insertion
 
 %% example of working to-be-gif code
 fig_o = figure; %figure obj
