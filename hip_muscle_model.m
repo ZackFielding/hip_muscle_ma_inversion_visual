@@ -10,29 +10,21 @@
 muscle_c = table2cell(readtable("muscle_OI.txt")); % muscle IO
 bone_c = table2cell(readtable("bony_landmark.txt")); % landmarks
 
-    % determine femoral mechanical axis
+% determine femoral mechanical axis
  % assign cell array length for automated appending
-bcs = size(bone_c,1); % track new additions to bone_c cell array
-for i = 1:1:2
-     % determine row name, vector distance, and lateral & medial landmarks
-    switch i
-        case 1
-            row_string = "LFE_MFE";
-            adj_factor = 0.5;
-            lateral_lm = "LFE"; medial_lm = "MFE";
-        case 2
-            row_string = "FE_Mechanical_axis";
-            adj_factor = 1;
-            lateral_lm = "LFE_MFE"; medial_lm = "HJC";
-    end
-     % adjust index to append to current cell array
-    ind = bcs + i;
-     % assign row name
-    bone_c{ind,1} = row_string;
-     % output vector length with given landmark strings & adjustment factor
-    [bone_c{ind, 2}, bone_c{ind, 3}, bone_c{ind, 4}] = ...
-    findVector(bone_c, lateral_lm, medial_lm, adj_factor); % find 1/2 point between MFE & LFE
-end
+ind = size(bone_c,1)+1; % track new additions to bone_c cell array
+
+ % 1/2 vec between femoral epicondyles
+ bone_c{ind,1} = "LFE_MFE";
+[bone_c{ind, 2}, bone_c{ind, 3}, bone_c{ind, 4}] = ...
+    findVector(bone_c, "LFE", "MFE", 0.5, "b2p");
+
+ % vector from HJC to 1/2 epi vec
+ind = ind +1;
+bone_c{ind,1} = "FE_Mechanical_axis";
+[bone_c{ind, 2}, bone_c{ind, 3}, bone_c{ind, 4}] = ...
+    findVector(bone_c, "MFE", "LFE_MFE", 1, "resultant");
+
 %% example of working to-be-gif code
 fig_o = figure; %figure obj
 for i = 1:1:5
