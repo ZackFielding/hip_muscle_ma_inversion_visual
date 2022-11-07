@@ -19,8 +19,8 @@ bone_c = table2cell(readtable("bony_landmark.txt")); % landmarks
 
 % generate muscle origin reference cell array for later
 for r = 1:1:size(muscle_c,1)
-    for l = 1:1:4
-        origin_ref{r,l} = muscle_c{r,1};
+    for s = 1:1:4
+        origin_ref{r,s} = muscle_c{r,s};
     end
 end
 
@@ -57,7 +57,7 @@ for i = 1:1:muscle_count
         findVector(mb_c, mb_c{i,1}, "FE_Mechanical_axis", 1, "b2p");
 end
 
-%% rotate femur into flexion by n-degrees until X degrees
+% rotate femur into flexion by n-degrees until X degrees
 
  % create struct to hold all new muscle insertio data
  % index neutral coordinates
@@ -104,8 +104,31 @@ for angle = 0:flexion_steps:max_flexion_angle
     sf_count = sf_count + 1; % ++struct field counter
 end
 
+%% test plot3
+% keep building this out - not complete
+fig1 = figure;
+view(168,2);
+for s = 1:1:step_number
+    hold on
+    for plt = 1:1:muscle_count
+        trend_style = getTrendStyle(plt, origin_ref);
+        % z,x,y
+        plot3([origin_ref{plt,4}; insertion_s(1).in{plt,4}],...
+            [origin_ref{plt,2}; insertion_s(1).in{plt,2}],...
+            [origin_ref{plt,3}; insertion_s(1).in{plt,3}],...
+            trend_style);
+    end
+    plot3(0,0,0, 'ko'); % HJC
+    plot3([0; mb_c{61,4}], [0; mb_c{61,2}], [0; mb_c{61,3}], 'k-'); % fem mech axis
+    plot3(0,0,0, 'ko'); % Epicondyle centre
+    hold off
+    cf = getframe(fig1); % capture current plot as movie
+    hold_frames{?} = frame2im(cf); %convert frame to RGB image
+end
+
+
 %% example of working to-be-gif code
-fig_o = figure; %figure obj
+fig_o = figre; %figure obj
 for i = 1:1:5
     plot3(x:x+i, y:y+i, z:z+i);
     drawnow
