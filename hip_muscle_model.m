@@ -60,11 +60,17 @@ end
 % rotate femur into flexion by n-degrees until X degrees
 
  % create struct to hold all new muscle insertio data
- % index neutral coordinates
+ % index neutral coordinates for muscles
 for r = 1:1:muscle_count
     insertion_s(1).in{r,1} = muscle_c{r,1};
     for l = 5:1:7
         insertion_s(1).in{r,l-3} = muscle_c{r,l};
+    end
+end
+ % index neutral coordinates for bony THIGH landmarks
+for b = 5:1:7
+    for r = 1:1:4
+        landmark_s(1).in{b-4,r} = bone_c {b,r};
     end
 end
 
@@ -88,19 +94,9 @@ for angle = 0:flexion_steps:max_flexion_angle
     mb_ind = mb_ind + 1; % ++cell arrray index
       
       % compute new muscle insertion site relative to HJC [0,0,0]
-      % index into insertion struct
-    for adj_i = 1:1:muscle_count
-         % insert row string
-        insertion_s(sf_count).in{adj_i,1} = mb_c{adj_i, 1};
-         % create reg array of insertion data
-        n_insertion = [mb_c{adj_i,5}, mb_c{adj_i,6}, mb_c{adj_i,7}];
-         % find insertion in global coorinate system
-        rot_insertion = FME_xyz + n_insertion;
-         % index rotated insertion into struct cell array
-        for ind = 1:1:3
-            insertion_s(sf_count).in{adj_i, ind+1} = rot_insertion(1,ind);
-        end
-    end
+      % index into struct
+    insertion_s = getRotatedCoord(insertion_s, sf_count, FME_xyz);
+    landmark_s = getRotatedCoord(landmark_s, sf_count, FME_xyz);
     sf_count = sf_count + 1; % ++struct field counter
 end
 
@@ -108,6 +104,7 @@ end
 % keep building this out - not complete
 fig1 = figure;
 view(168,2);
+step_number = 1; % testing purposes
 for s = 1:1:step_number
     hold on
     for plt = 1:1:muscle_count
@@ -123,7 +120,7 @@ for s = 1:1:step_number
     plot3(0,0,0, 'ko'); % Epicondyle centre
     hold off
     cf = getframe(fig1); % capture current plot as movie
-    hold_frames{?} = frame2im(cf); %convert frame to RGB image
+    %hold_frames{?} = frame2im(cf); %convert frame to RGB image
 end
 
 
