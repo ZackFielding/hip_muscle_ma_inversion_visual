@@ -115,37 +115,39 @@ end
 clearvars cSTR i j temp_FMA
 
 %% next steps
- % rotate FMA for each desired hip flexion angle
- % compute new insertion & femoral lm data (rotated FMA + n_EPI_MID_ins)
- 
-%% everything below here needs to be refactored to match new approach
+% rotate FMA for each desired hip flexion angle
 
- % get neutral FME vector as regular array
-c_pos = size(mb_c,1);
-neutral_FME = [mb_c{c_pos, 2}; mb_c{c_pos, 3}; mb_c{c_pos, 4}];
-clearvars c_pos % only used for prior calculation
-mb_ind = size(mb_c,1) + 1; % used for indexing into mb_c
-sf_count = 2; % keep track of current struct field number
- % set peak flexion angle & flexion steps
-max_flexion_angle = 90;
-flexion_steps = 5;
+FMA_ridx = cell2mat(values(IO_MAP.bone, {"FMA"}));
+n_FMA = [IO_STRUCT(1).bone(FMA_ridx,1); 
+        IO_STRUCT(1).bone(FMA_ridx,2); 
+        IO_STRUCT(1).bone(FMA_ridx,3)]; % store neutral FMA vec to reduce func calls
+ % compute struct sizes to reduce func calls
+LENGTH_STRUCT(1,1) = size(IO_STRUCT(1).muscle, 1);
+LENGTH_STRUCT(2,1) = size(IO_STRUCT(1).bone, 1);
 
-for angle = 0:flexion_steps:max_flexion_angle
-      % automated row name generator for mb_c
-    row_str = append("FE_Mechanical_axis_", int2str(angle), "_deg");
-    mb_c{mb_ind,1} = row_str;
-      % rotate mechanical axis -> returns 1x3 and x3 1x1 arrays
-    [FME_xyz, mb_c{mb_ind, 2}, mb_c{mb_ind, 3}, mb_c{mb_ind, 4}] = ...
-        rotateFME(angle, neutral_FME);
-    mb_ind = mb_ind + 1; % ++cell arrray index
-      
-      % compute new muscle insertion site relative to HJC [0,0,0]
-      % index into struct
-    insertion_s = getRotatedCoord(insertion_s, sf_count, FME_xyz);
-    landmark_s = getRotatedCoord(landmark_s, sf_count, FME_xyz);
-    sf_count = sf_count + 1; % ++struct field counter
+fstep = 5; % angle steps
+fstep_stop = 90; % max angle
+sc = 2; % for indexing into muscle & bone struct
+
+for ang = fstep:fstep:fstep_stop
+     % z-axis rotation matrix * neutral FMA vector
+    rot_z = [cos(ang), -sin(ang), 0;
+          sin(ang), cos(ang), 0;
+          0, 0, 1] * n_FMA;
+    IO_STRUCT(sc).bone(FMA_ridx,:) = rot_z;
+     % rotated FMA + neutral muscle insertions & femoral landmarks
+    for mb = [1 2]
+        cSTR = mb_str{mb,1}; % store current outcome string
+         % neutral FMA + vector from mid epi for all muscle insertions &
+         % femoal boney landmarks
+        for idx = 1:1:LENGTH_STRUCT(mb,1)
+            IO_STRUCT(sc).(cSTR)(idx, :) ...
+                = rot_z.' + n_EPI_MID_ins.(cSTR)(idx, :);
+        end
+    end
+    sc = sc + 1; % ++struct field tracker
 end
-
+clearvars n_FMA FMA_r_idx ang rot_z sc
 %% test plot3
 
 s_STOP = 10; % testing purposes
