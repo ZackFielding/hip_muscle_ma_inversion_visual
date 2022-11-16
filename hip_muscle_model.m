@@ -14,6 +14,7 @@
 %% load data from .txt
     % keep the data as cell arrays - allows string finding and numberical
     % iteration for looping for computations
+clear
 muscle_c = table2cell(readtable("muscle_OI.txt")); % muscle IO
 bone_c = table2cell(readtable("bony_landmark.txt")); % landmarks
 
@@ -38,15 +39,22 @@ IO_MAP.bone = containers.Map('KeyType', 'char', 'ValueType', 'int32');
 for ib = 1:1:ROW_COLUMN.bone(1,1)
     IO_MAP.bone(bone_c{ib,1}) = ib;
 end
-%%
+
+ % allocate muscle origin data to separate array to increase loop interp
+muscle_origins = NaN(ROW_COLUMN.muscle(1,1), 3);
+for i = 1:1:ROW_COLUMN.muscle(1,1)
+    for j = 2:1:4
+        muscle_origins(i,j-1) = muscle_c{i,j};
+    end
+end
+
 clearvars ib im % clear loop vars
 % convert cell arrays -> normal arrays
 for i = [1 2]
      % allocate string to improve readability in block
     cSTR = mb_str{i,1}; % 'muscle' or 'bone'
      % allocate NaNs to improve array alloc performance
-    IO_STRUCT(1).(cSTR) = NaN(ROW_COLUMN.(cSTR)(1,1),... % row count
-                        ROW_COLUMN.(cSTR)(1,2)-1); % col count -1
+    IO_STRUCT(1).(cSTR) = NaN(ROW_COLUMN.(cSTR)(1,1), 3);
      % temp cell array to remove need for repetitive if-else run
     switch i
         case 1 
@@ -58,16 +66,21 @@ for i = [1 2]
     end
 
     for row = 1:1:ROW_COLUMN.(cSTR)(1,1)
-        for col = 2:1:ROW_COLUMN.(cSTR)(1,2)
-            IO_STRUCT.(cSTR)(row,col-1) = temp_c{row,col}; % note col-1 for IO_s
+        % if muscle -> 5:1:7 into 1:1:3 (no origin - need correction factor
+        if i == 1
+            af = 3;
+        else
+            af = 0;
+        end
+        for col = af+2:1:ROW_COLUMN.(cSTR)(1,2)
+            IO_STRUCT.(cSTR)(row,col-af-1) = temp_c{row,col}; % note col-1 for IO_s
         end
     end
-    clearvars temp_c
+    clearvars temp_c cSTR col i muscle_c row
 end
 
  % clean up workspace
-clearvars -except IO_STRUCT IO_MAP mb_str ROW_COLUMN
-% determine femoral mechanical axis (FMA) vector
+clearvars af bone_c j 
 
 % Epicondyle mid point (EPI_MID)
  % increment bone array row count -> factor for new index
@@ -100,16 +113,9 @@ n_EPI_MID_ins.bone = NaN(ROW_COLUMN.bone(1,1), 3); % original == x3 col.
  % most of bone result -> not used -> stays consistent with Map
 temp_FMA = IO_STRUCT(1).bone(cell2mat(values(IO_MAP.bone, {'FMA'})), 1:3);
 for i = [1 2]
-    switch i % insertion vec for for muscle - all col for bone
-        case 1
-            row_vec = 4:1:6;
-        case 2
-            row_vec = 1:1:3;
-    end
-
     cSTR = mb_str{i,1};
     for j = 1:1:ROW_COLUMN.(cSTR)(1,1) % need to correct for bone+2
-        n_EPI_MID_ins.(cSTR)(j, 1:3) = IO_STRUCT(1).(cSTR)(j, row_vec) - ...
+        n_EPI_MID_ins.(cSTR)(j, 1:3) = IO_STRUCT(1).(cSTR)(j,:) - ...
             temp_FMA;
     end
 end
@@ -131,8 +137,9 @@ sc = 2; % for indexing into muscle & bone struct
 
 for ang = fstep:fstep:fstep_stop
      % z-axis rotation matrix * neutral FMA vector
-    rot_z = [cos(ang), -sin(ang), 0;
-          sin(ang), cos(ang), 0;
+    rang = deg2rad(ang);
+    rot_z = [cos(rang), -sin(rang), 0;
+          sin(rang), cos(rang), 0;
           0, 0, 1] * n_FMA;
     IO_STRUCT(sc).bone(FMA_ridx,:) = rot_z;
      % rotated FMA + neutral muscle insertions & femoral landmarks
@@ -147,48 +154,46 @@ for ang = fstep:fstep:fstep_stop
     end
     sc = sc + 1; % ++struct field tracker
 end
-clearvars n_FMA FMA_r_idx ang rot_z sc
-%% test plot3
-
+clearvars n_FMA ang rot_z sc
+% test plot3
+Z = 3; X = 1; Y = 2; % for readability
 fig1 = figure;
 view(168,2);
-for s = 1:1:sc % sc from previous block (field size of IO_STRUCT)
+for psc = 5:1:5 % sc from previous block (field size of IO_STRUCT)
     hold on
-    for plt = 1:1:muscle_count
+    for plt = 1:1:ROW_COLUMN.muscle(1,1)
         % z,x,y
-        plot3([ ; ],...
-            [ ; ],...
-            [ ; ],...
-            trend_style(plt,1);
+        plot3([muscle_origins(plt, Z) ; IO_STRUCT(psc).muscle(plt, Z)],...
+              [muscle_origins(plt, X) ; IO_STRUCT(psc).muscle(plt, X)],...
+              [muscle_origins(plt, Y) ; IO_STRUCT(psc).muscle(plt, Y)],...
+              trend_styles{plt,1});
     end
-     % FME
-    FME_row_ind = FME_row_ind + s;
-    plot3([0; mb_c{FME_row_ind,4}],...
-            [0; mb_c{FME_row_ind,2}],...
-            [0; mb_c{FME_row_ind,3}], 'k-');
-     % plot femoral boney landmarks -> these change with FME rotation
-    for b = 1:1:femoral_lm_count
-        plot3([landmark_s(s).in{b,4}],...
-                [landmark_s(s).in{b,2}],...
-                    [landmark_s(s).in{b,3}], 'k*');
-    end
-
+     % rotated FMA vector
+    plot3([0; IO_STRUCT(psc).bone(FMA_ridx, Z)],...
+          [0; IO_STRUCT(psc).bone(FMA_ridx, X)],...
+          [0; IO_STRUCT(psc).bone(FMA_ridx, Y)],...
+          'k-');
      % plot pelvis boney landmarks -> these DO NOT change with FME rotation
-    for pb = 1:1:4
-        pbplot = plot3(bone_c{pb,4},...
-            bone_c{pb,2},...
-            bone_c{pb,3}, '*');
+    for plm = 1:1:4
+        pbplot = plot3(IO_STRUCT(1).bone(plm, Z),...
+                       IO_STRUCT(1).bone(plm, X),...
+                       IO_STRUCT(1).bone(plm, Y),...
+                       '*');
         pbplot.Color = '#A2142F';
     end
-
+     % plot rotated femoral landmarks -> FGT, MFE, LFE
+    for flm = plm+1:1:7
+        plot3([IO_STRUCT(psc).bone(flm, Z)],...
+              [IO_STRUCT(psc).bone(flm, X)],...
+              [IO_STRUCT(psc).bone(flm, Y)],...
+              'k*');
+    end
     hold off
     %pause(3);
     %close;
     %cf = getframe(fig1); % capture current plot as movie
     %hold_frames{?} = frame2im(cf); %convert frame to RGB image
 end
-
-
 %% example of working to-be-gif code
 fig_o = figre; %figure obj
 for i = 1:1:5
