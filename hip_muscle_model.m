@@ -30,6 +30,7 @@ ROW_COLUMN.bone = size(bone_c);
 IO_MAP.muscle = containers.Map('KeyType', 'char', 'ValueType', 'int32');
 for im = 1:1:ROW_COLUMN.muscle(1,1)
     IO_MAP.muscle(muscle_c{im,1}) = im;
+    trend_styles{im,1} = getTrendStyle(muscle_c{im,1});
 end
 
 % create hash map of landmark names & array row positions
@@ -37,7 +38,7 @@ IO_MAP.bone = containers.Map('KeyType', 'char', 'ValueType', 'int32');
 for ib = 1:1:ROW_COLUMN.bone(1,1)
     IO_MAP.bone(bone_c{ib,1}) = ib;
 end
-
+%%
 clearvars ib im % clear loop vars
 % convert cell arrays -> normal arrays
 for i = [1 2]
@@ -114,7 +115,6 @@ for i = [1 2]
 end
 clearvars cSTR i j temp_FMA
 
-%% next steps
 % rotate FMA for each desired hip flexion angle
 
 FMA_ridx = cell2mat(values(IO_MAP.bone, {"FMA"}));
@@ -150,21 +150,16 @@ end
 clearvars n_FMA FMA_r_idx ang rot_z sc
 %% test plot3
 
-s_STOP = 10; % testing purposes
-s_START = 10;
-femoral_lm_count = size(landmark_s(1).in,1); % for landmark plotting
-FME_row_ind = 61; % '+ s' will be applied to compute correct FME coord
 fig1 = figure;
 view(168,2);
-for s = s_START:1:s_STOP
+for s = 1:1:sc % sc from previous block (field size of IO_STRUCT)
     hold on
     for plt = 1:1:muscle_count
-        trend_style = getTrendStyle(plt, origin_ref);
         % z,x,y
-        plot3([origin_ref{plt,4}; insertion_s(s).in{plt,4}],...
-            [origin_ref{plt,2}; insertion_s(s).in{plt,2}],...
-            [origin_ref{plt,3}; insertion_s(s).in{plt,3}],...
-            trend_style);
+        plot3([ ; ],...
+            [ ; ],...
+            [ ; ],...
+            trend_style(plt,1);
     end
      % FME
     FME_row_ind = FME_row_ind + s;
