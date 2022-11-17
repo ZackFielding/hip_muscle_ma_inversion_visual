@@ -38,6 +38,7 @@ end
 IO_MAP.bone = containers.Map('KeyType', 'char', 'ValueType', 'int32');
 for ib = 1:1:ROW_COLUMN.bone(1,1)
     IO_MAP.bone(bone_c{ib,1}) = ib;
+    bone_str{ib,1} = bone_c{ib,1}; % used figure labeling
 end
 
  % allocate muscle origin data to separate array to increase loop interp
@@ -169,17 +170,21 @@ end
 clearvars n_FMA ang rot_z sc
 
 % test plot3
+ % femoral landmark labels
 Z = 3; X = 1; Y = 2; % for readability
+label_offset = 0.5; % offsets landmark labels to prevent overlap
 fig1 = figure("WindowState", "maximized");
+pause(1); % give time to resize figure if auto saving images
 view(168,2);
 for psc = 1:1:1 % sc from previous block (field size of IO_STRUCT)
     hold on
-    for plt = 1:1:ROW_COLUMN.muscle(1,1)
+    for plt = 26:1:ROW_COLUMN.muscle(1,1)
         % z,x,y
         plot3([muscle_origins(plt, Z) ; IO_STRUCT(psc).muscle(plt, Z)],...
               [muscle_origins(plt, X) ; IO_STRUCT(psc).muscle(plt, X)],...
               [muscle_origins(plt, Y) ; IO_STRUCT(psc).muscle(plt, Y)],...
-              trend_styles{plt,1});
+              trend_styles{plt,1},...
+              'LineWidth', 1.5);
     end
 
      % plot embedded rotating thigh LCS...
@@ -197,21 +202,34 @@ for psc = 1:1:1 % sc from previous block (field size of IO_STRUCT)
     plot3([0; IO_STRUCT(psc).bone(FMA_ridx, Z)],...
           [0; IO_STRUCT(psc).bone(FMA_ridx, X)],...
           [0; IO_STRUCT(psc).bone(FMA_ridx, Y)],...
-          'k-');
+          'k-', 'LineWidth', 4);
+
      % plot pelvis boney landmarks -> these DO NOT change with FME rotation
     for plm = 1:1:4
-        pbplot = plot3(IO_STRUCT(1).bone(plm, Z),...
-                       IO_STRUCT(1).bone(plm, X),...
-                       IO_STRUCT(1).bone(plm, Y),...
-                       '*');
+        XYZ(1,:) = [IO_STRUCT(1).bone(plm, Z),...
+                    IO_STRUCT(1).bone(plm, X),...
+                    IO_STRUCT(1).bone(plm, Y)];
+        pbplot = plot3(XYZ(1,1), XYZ(1,2), XYZ(1,3), '.', 'MarkerSize', 30);
         pbplot.Color = '#A2142F';
+        text(XYZ(1,1)+label_offset, XYZ(1,2)+label_offset, XYZ(1,3)+label_offset,...
+            bone_str{plm,1},... % string
+            'HorizontalAlignment', 'right',...
+            'FontWeight', 'bold', 'FontSize', 14);
     end
+
      % plot rotated femoral landmarks -> FGT, MFE, LFE
     for flm = plm+1:1:7
-        plot3([IO_STRUCT(psc).bone(flm, Z)],...
-              [IO_STRUCT(psc).bone(flm, X)],...
-              [IO_STRUCT(psc).bone(flm, Y)],...
-              'k*');
+         % allocate since both plot3 & text() will use coord
+        XYZ(1,:) = [IO_STRUCT(psc).bone(flm, Z),...
+                    IO_STRUCT(psc).bone(flm, X),...
+                    IO_STRUCT(psc).bone(flm, Y)];
+         % plot points
+        plot3(XYZ(1,1), XYZ(1,2), XYZ(1,3), 'k.', 'MarkerSize', 30);
+         % add marker label
+        text(XYZ(1,1)+label_offset, XYZ(1,2)+label_offset, XYZ(1,3)+label_offset,...
+            bone_str{flm,1},... % string
+            'HorizontalAlignment', 'right',...
+            'FontWeight', 'bold', 'FontSize', 14);
     end
     hold off
     %pause(3);
