@@ -123,6 +123,13 @@ clearvars cSTR i j temp_FMA
 
 % rotate FMA for each desired hip flexion angle
 
+ % rotate unit vectors of embedded thigh LCS
+thigh_LCS.X(1,:) = [5 0 0];
+thigh_LCS.Y(1,:) = [0 5 0];
+thigh_LCS.Z(1,:) = [0 0 5];
+XYZ_str{1,1} = 'X'; XYZ_str{2,1} = 'Y'; XYZ_str{3,1} = 'Z';
+XYZ_str{1,2} = 'r'; XYZ_str{2,2} = 'g'; XYZ_str{3,2} = 'b';
+
 FMA_ridx = cell2mat(values(IO_MAP.bone, {"FMA"}));
 n_FMA = [IO_STRUCT(1).bone(FMA_ridx,1); 
         IO_STRUCT(1).bone(FMA_ridx,2); 
@@ -138,10 +145,15 @@ sc = 2; % for indexing into muscle & bone struct
 for ang = fstep:fstep:fstep_stop
      % z-axis rotation matrix * neutral FMA vector
     rang = deg2rad(ang);
-    rot_z = [cos(rang), -sin(rang), 0;
-          sin(rang), cos(rang), 0;
-          0, 0, 1] * n_FMA;
+    rot_z = rotateVecAboutZAxis(rang, n_FMA);
     IO_STRUCT(sc).bone(FMA_ridx,:) = rot_z;
+     
+     % roate embedded thigh LCS (x3 unit vectors)
+    for u = 1:1:3
+        thigh_LCS.(XYZ_str{u,1})(sc,:) = ...
+            rotateVecAboutZAxis(rang, thigh_LCS.(XYZ_str{u,1})(1,:).');
+    end
+
      % rotated FMA + neutral muscle insertions & femoral landmarks
     for mb = [1 2]
         cSTR = mb_str{mb,1}; % store current outcome string
@@ -155,11 +167,12 @@ for ang = fstep:fstep:fstep_stop
     sc = sc + 1; % ++struct field tracker
 end
 clearvars n_FMA ang rot_z sc
+
 % test plot3
 Z = 3; X = 1; Y = 2; % for readability
-fig1 = figure;
+fig1 = figure("WindowState", "maximized");
 view(168,2);
-for psc = 5:1:5 % sc from previous block (field size of IO_STRUCT)
+for psc = 1:1:1 % sc from previous block (field size of IO_STRUCT)
     hold on
     for plt = 1:1:ROW_COLUMN.muscle(1,1)
         % z,x,y
@@ -168,6 +181,18 @@ for psc = 5:1:5 % sc from previous block (field size of IO_STRUCT)
               [muscle_origins(plt, Y) ; IO_STRUCT(psc).muscle(plt, Y)],...
               trend_styles{plt,1});
     end
+
+     % plot embedded rotating thigh LCS...
+     % quiver3(0,0,0, +lateral (Z), +anterior (X),+superior (Y))
+    for q = 1:1:3
+        plt_uv(q) = quiver3(0,0,0,...
+            thigh_LCS.(XYZ_str{q,1})(psc,3),...
+            thigh_LCS.(XYZ_str{q,1})(psc,1),...
+            thigh_LCS.(XYZ_str{q,1})(psc,2));
+        plt_uv(q).LineWidth = 2;
+        plt_uv(q).Color = XYZ_str{q,2};
+    end
+
      % rotated FMA vector
     plot3([0; IO_STRUCT(psc).bone(FMA_ridx, Z)],...
           [0; IO_STRUCT(psc).bone(FMA_ridx, X)],...
