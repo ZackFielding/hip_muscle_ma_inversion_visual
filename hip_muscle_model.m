@@ -15,6 +15,7 @@
     % keep the data as cell arrays - allows string finding and numberical
     % iteration for looping for computations
 clear
+tic;
 muscle_c = table2cell(readtable("muscle_OI.txt")); % muscle IO
 bone_c = table2cell(readtable("bony_landmark.txt")); % landmarks
 
@@ -167,16 +168,20 @@ for ang = fstep:fstep:fstep_stop
     end
     sc = sc + 1; % ++struct field tracker
 end
-clearvars n_FMA ang rot_z sc
+clearvars n_FMA ang rot_z
 
-% test plot3
- % femoral landmark labels
-Z = 3; X = 1; Y = 2; % for readability
+%az_step_dec = 90/(sc-1); % auto figure rotate
+%az = 180; % start with frontal plane anterior view
+elev = 2; % start perspective height at mid thigh level
+Z = 3; X = 1; Y = 2; % femoral landmark labels for readability
 label_offset = 0.5; % offsets landmark labels to prevent overlap
-fig1 = figure("WindowState", "maximized");
-pause(1); % give time to resize figure if auto saving images
-view(168,2);
-for psc = 1:1:1 % sc from previous block (field size of IO_STRUCT)
+
+for psc = 1:1:(sc-1) % sc from previous block (field size of IO_STRUCT)
+    fig1 = figure("WindowState", "maximized");
+    pause(1); % give time to resize figure if auto saving images
+    view(170,elev);
+    %az = az - az_step_dec;
+    %elev = elev + 0.25;
     hold on
     for plt = 26:1:ROW_COLUMN.muscle(1,1)
         % z,x,y
@@ -232,30 +237,23 @@ for psc = 1:1:1 % sc from previous block (field size of IO_STRUCT)
             'FontWeight', 'bold', 'FontSize', 14);
     end
     hold off
-    %pause(3);
-    %close;
-    %cf = getframe(fig1); % capture current plot as movie
-    %hold_frames{?} = frame2im(cf); %convert frame to RGB image
-end
-%% example of working to-be-gif code
-fig_o = figre; %figure obj
-for i = 1:1:5
-    plot3(x:x+i, y:y+i, z:z+i);
-    drawnow
-    campos([0, +20, -20]);
-    cf = getframe(fig_o); % capture current plot as movie
-    hold_frames{i} = frame2im(cf); %convert frame to RGB image
-    pause(0.5);
+    cf = getframe(fig1); % capture current plot as movie
+    hold_frames{psc} = frame2im(cf); %convert frame to RGB image
+    pause(2);
+    close;
 end
 
+% example of working to-be-gif code
 % export figure as gif
-close(fig_o); % close figre
 file = "test_animation.gif"; % file name
-for j = 1:1:5
-    [ind_im, c_map] = rgb2ind(hold_frames{j}, 256);
-    if j == 1
-        imwrite(ind_im, c_map, file, "gif", "LoopCount", Inf, "DelayTime", 1);
+for f = 1:1:psc % for number of hold_frames
+    [ind_im, c_map] = rgb2ind(hold_frames{f}, 256);
+    if f == 1
+        imwrite(ind_im, c_map, file, "gif", "LoopCount", Inf, "DelayTime", 0.5);
     else
-        imwrite(ind_im, c_map, file, "gif", "WriteMode", "append", "DelayTime", 1);
+        imwrite(ind_im, c_map, file, "gif", "WriteMode", "append", "DelayTime", 0.5);
     end
 end
+
+e_time = toc;
+fprintf("End of script reached in %.3f seconds.\n", e_time);
